@@ -2,23 +2,28 @@
 
 const { spawnSync } = require('child_process')
 
-const options = {
-  shell: true,
-}
-
-const branchList = spawnSync('git branch --merged', options)
-
-const data = String(branchList.stdout).split(/\r\n|\r|\n/g)
-const filtered = data
-  .map((value) => value.trim())
-  .filter((value) => {
-    const isMasterOrOrigin = /master|origin$/
-    const isCurrentBranch = /^\*/
-
-    return value && !isMasterOrOrigin.test(value) && !isCurrentBranch.test(value)
+const run = command => {
+  return spawnSync(command, {
+    shell: true,
   })
-
-if (filtered.length) {
-  const branchDelete = spawnSync('git branch -d ' + filtered.join(' '), options)
 }
 
+const gitBranchList = run('git branch --merged')
+
+String(gitBranchList.stdout)
+  .split(/\r\n|\r|\n/g)
+  .filter(value => {
+    const pattern = /(^\*|master$)/
+
+    return value && !pattern.test(value)
+  })
+  .map(value => {
+    const branchName = value.trim()
+    const gitBranchDelete = run('git branch -d ' + branchName)
+
+    if (gitBranchDelete.error) {
+      throw gitBranchDelete.error
+    }
+
+    console.log(`${branchName} is deleted`)
+  })
